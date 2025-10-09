@@ -329,9 +329,9 @@ async function loadActivities() {
             cardsContainer.innerHTML = `
                 <div class="empty-message">
                     <h3>No se encontraron actividades</h3>
-                    <p>Verifica que tu Google Sheets sea público y tenga datos.</p>
-                    <p><strong>Estructura esperada:</strong></p>
-                    <p>Columnas: Materia | Actividad | Fecha Apertura | Fecha Cierre | Descripción | Enlaces</p>
+                    <p>Verifica que tengas conexion a internet.</p>
+                    <p><strong>Si esto no es el caso entonces puedes enviarme un mensaje a cualquiera de mis redes sociales</strong></p>
+                    <p>Lo arreglare pronto! Si no lo arreglo es porque nunca me avisaste bro!</p>
                 </div>
             `;
             return;
@@ -539,9 +539,9 @@ async function openScheduleModal() {
             scheduleContent.innerHTML = `
                 <div class="no-schedule">
                     <h3>No se encontraron horarios</h3>
-                    <p>Verifica que la hoja "Horarios" exista y tenga datos.</p>
-                    <p><strong>Estructura esperada:</strong></p>
-                    <p>Materia | Días | Hora | Enlace | Nombre del Enlace</p>
+                    <p>Verifica que tengas conexion a internet</p>
+                    <p><strong>Si esto no es el caso entonces puedes enviarme un mensaje a cualquiera de mis redes sociales</strong></p>
+                    <p>Lo arreglare pronto! Si no lo arreglo es porque nunca me avisaste bro!</p>
                 </div>
             `;
             return;
@@ -555,7 +555,7 @@ async function openScheduleModal() {
             <div class="error-message">
                 <h3>Error al cargar los horarios</h3>
                 <p><strong>Detalles:</strong> ${error.message}</p>
-                <p>Revisa que la hoja "Horarios" sea pública.</p>
+                <p>Lo arreglare pronto!</p>
             </div>
         `;
     }
@@ -784,7 +784,7 @@ async function loadActivities() {
             cardsContainer.innerHTML = `
                 <div class="empty-message">
                     <h3>No se encontraron actividades</h3>
-                    <p>Verifica que tu Google Sheets sea público y tenga datos.</p>
+                    <p>Lo arreglare pronto!</p>
                 </div>
             `;
             return;
@@ -825,7 +825,7 @@ function setupHoverMessages() {
     cards.forEach(card => {
         card.addEventListener('mouseenter', function() {
             clearTimeout(hideTimeout);
-            hoverMessage.textContent = 'Haz clic para ver los detalles completos de esta actividad';
+            hoverMessage.textContent = 'Haz clic o presiona para ver los detalles completos de esta actividad';
             hoverMessage.classList.add('show');
         });
 
@@ -851,7 +851,7 @@ function setupHoverMessages() {
 function enhanceSubtitle() {
     const subtitle = document.querySelector('.subtitle');
     if (subtitle) {
-        subtitle.innerHTML = 'Pasa el cursor sobre cualquier tarjeta y haz clic para ver los detalles';
+        subtitle.innerHTML = 'Selecciona sobre cualquier tarjeta y haz clic o presiona para ver los detalles';
         subtitle.style.cursor = 'default';
 
         subtitle.addEventListener('mouseenter', function() {
@@ -1000,7 +1000,7 @@ function showInstallSuccessMessage() {
             z-index: 1000;
             animation: slideInRight 0.5s ease;
         ">
-            <strong> ¡App instalada!</strong>
+            <strong>¡App instalada!</strong>
             <p style="margin: 5px 0 0 0; font-size: 0.9rem;">
                 Ahora puedes acceder rápidamente desde tu pantalla de inicio
             </p>
@@ -1031,7 +1031,7 @@ function showInstallRejectedMessage() {
             z-index: 1000;
             animation: slideInRight 0.5s ease;
         ">
-            <strong>💡 ¿Cambiaste de idea?</strong>
+            <strong>¿Cambiaste de idea?</strong>
             <p style="margin: 5px 0 0 0; font-size: 0.9rem;">
                 Puedes instalar la app luego desde el menú de tu navegador
             </p>
@@ -1073,7 +1073,7 @@ async function loadActivities() {
 
         const cachedActivities = localStorage.getItem('cachedActivities');
         if (cachedActivities) {
-            console.log('📂 Cargando datos cacheados...');
+            console.log(' Cargando datos cacheados...');
             processAndDisplayActivities(JSON.parse(cachedActivities));
         } else {
             showError(error);
@@ -1088,7 +1088,7 @@ function processAndDisplayActivities(activities) {
         cardsContainer.innerHTML = `
             <div class="empty-message">
                 <h3>No se encontraron actividades</h3>
-                <p>${navigator.onLine ? 'Verifica que tu Google Sheets sea público.' : 'No hay datos cacheados disponibles.'}</p>
+                <p>${navigator.onLine ? 'Lo arreglare pronto!.' : 'No hay datos cacheados disponibles.'}</p>
             </div>
         `;
         return;
@@ -1114,7 +1114,7 @@ function showOfflineMessage() {
     const cachedActivities = localStorage.getItem('cachedActivities');
     
     if (cachedActivities) {
-        console.log('📂 Modo offline - Cargando datos cacheados');
+        console.log(' Modo offline - Cargando datos cacheados');
         processAndDisplayActivities(JSON.parse(cachedActivities));
 
         showOfflineBanner();
@@ -1269,7 +1269,7 @@ function showInstallRejectedMessage() {
         animation: slideInRight 0.5s ease;
     `;
     message.innerHTML = `
-        <strong>💡 ¿Cambiaste de idea?</strong>
+        <strong> ¿Cambiaste de idea?</strong>
         <p style="margin: 5px 0 0 0; font-size: 0.9rem;">
             Puedes instalar la app luego desde el menú de tu navegador
         </p>
@@ -1318,4 +1318,35 @@ if ('serviceWorker' in navigator) {
                 console.log('Error al registrar el Service Worker:', error);
             });
     });
+
 }
+
+const PUBLIC_VAPID_KEY = "BAAj8AYP6CPtIBm6M0-jFHSC9Yix3TmwRfT9QY_TlzUPHV_2vV3gl0TzI1XH90r0XCkSs8FY6hrnmN90aSinIoM";
+
+async function registerPush() {
+  if ("serviceWorker" in navigator) {
+    const registration = await navigator.serviceWorker.register("service-worker.js");
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
+    });
+
+    await fetch("/subscribe", {
+      method: "POST",
+      body: JSON.stringify(subscription),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    console.log("Suscripción registrada");
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+registerPush();
