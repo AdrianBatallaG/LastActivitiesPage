@@ -1350,3 +1350,40 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 registerPush();
+
+
+// === 🔔 SISTEMA DE NOTIFICACIONES ===
+import { messaging, getToken, onMessage } from './firebase-config.js';
+
+async function inicializarNotificaciones() {
+  try {
+    const permiso = await Notification.requestPermission();
+    if (permiso === 'granted') {
+      const token = await getToken(messaging, { vapidKey: 'ghjRO7Agyt9WUEOWAynaEDXCkQnMtWU2SoCAEhbEg5o' });
+      console.log('✅ Token del usuario:', token);
+
+      // Envía el token al backend para registrar el dispositivo
+      await fetch('https://Backend/register-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
+      console.log('Token registrado en el backend');
+    } else {
+      console.log('❌ El usuario denegó las notificaciones.');
+    }
+  } catch (error) {
+    console.error('Error al solicitar notificaciones:', error);
+  }
+}
+
+// Ejecuta la función al iniciar la app
+inicializarNotificaciones();
+
+// Escucha notificaciones cuando la app está abierta
+onMessage(messaging, (payload) => {
+  console.log('📩 Notificación recibida en primer plano:', payload);
+  alert(payload.notification.title + '\n' + payload.notification.body);
+});
+
