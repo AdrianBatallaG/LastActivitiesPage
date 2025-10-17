@@ -70,3 +70,29 @@ self.addEventListener("push", (event) => {
     icon: "icon-192.png",
   });
 });
+
+importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyCXz4eVjIX0MFLRRb3MlfpGNhIlvAd00LY",
+  authDomain: "push-notifications-pwa-68ef7.firebaseapp.com",
+  projectId: "push-notifications-pwa-68ef7",
+  messagingSenderId: "707186942917",
+  appId: "1:707186942917:web:66350b2f4de031d1ef61ac",
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  console.log('Notificación recibida en segundo plano:', payload);
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: '/icon-192x192.png',
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+
