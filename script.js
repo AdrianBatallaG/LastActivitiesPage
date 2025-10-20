@@ -3,25 +3,9 @@ function flipCard(card) {
 }
 
 async function fetchSheetData() {
-    const SHEET_ID = '1tdE9k9rwTN-O6ZD45-tTj_1tOjpJ7laZjaPAdmbZYeY';
-    const API_KEY = 'AIzaSyBgJh_1kfV3l5K1ccs8NNOU1q3Tq2nWzY0';
-    
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Actividades?key=${API_KEY}`;
-    
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('Datos brutos de Google Sheets API:', data);
-        
-        return parseSheetData(data.values);
-    } catch (error) {
-        console.error('Error al obtener datos:', error);
-        return fetchSheetDataCSV();
-    }
+    return await fetchSheetDataCSV();
 }
+
 
 async function fetchSheetDataCSV() {
     const SHEET_ID = '1tdE9k9rwTN-O6ZD45-tTj_1tOjpJ7laZjaPAdmbZYeY';
@@ -357,24 +341,14 @@ async function loadActivities() {
 
 document.addEventListener('DOMContentLoaded', loadActivities);
 
+
 async function fetchScheduleData() {
-    const SHEET_ID = '1tdE9k9rwTN-O6ZD45-tTj_1tOjpJ7laZjaPAdmbZYeY';
-    const SCHEDULE_SHEET_NAME = 'Horarios';
-    
     try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SCHEDULE_SHEET_NAME}?key=AIzaSyBgJh_1kfV3l5K1ccs8NNOU1q3Tq2nWzY0`;
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('Datos de horarios:', data);
-        
-        return parseScheduleData(data.values);
+        console.log('Cargando horarios desde CSV...');
+        return await fetchScheduleDataCSV(); 
     } catch (error) {
-        console.error('Error al obtener horarios:', error);
-        return fetchScheduleDataCSV();
+        console.error('❌ Error al obtener horarios desde CSV:', error);
+        throw new Error('No se pudieron cargar los horarios. Verifica la conexión o los permisos del documento.');
     }
 }
 
@@ -1350,3 +1324,4 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 registerPush();
+
