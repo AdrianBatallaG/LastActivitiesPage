@@ -840,9 +840,92 @@ function enhanceSubtitle() {
     }
 }
 
+async function setupPushNotifications(registration) {
+    if (!('Notification' in window)) {
+        console.log('Este navegador no soporta notificaciones');
+        return;
+    }
+
+    if (Notification.permission === 'default') {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                console.log('Permiso para notificaciones concedido');
+                subscribeToPush(registration);
+            }
+        } catch (error) {
+            console.error('Error solicitando permiso:', error);
+        }
+    } else if (Notification.permission === 'granted') {
+        subscribeToPush(registration);
+    }
+}
+
+async function subscribeToPush(registration) {
+    try {
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array('BLx1eQ3...')
+        });
+        
+        console.log('Suscrito a notificaciones push:', subscription);
+        await sendSubscriptionToServer(subscription);
+        
+    } catch (error) {
+        console.error('Error suscribiéndose a push:', error);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function sendSubscriptionToServer(subscription) {
+    try {
+        const response = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(subscription)
+        });
+        
+        if (response.ok) {
+            console.log('Suscripción guardada en servidor');
+        }
+    } catch (error) {
+        console.error('Error enviando suscripción:', error);
+    }
+}
+
+function showLocalNotification(title, options = {}) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        return;
+    }
+
+    const notificationOptions = {
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        ...options
+    };
+
+    new Notification(title, notificationOptions);
+}
+
 function setupConnectionMonitor() {
     const connectionStatus = document.getElementById('connectionStatus');
-    
+
     function updateConnectionStatus() {
         if (navigator.onLine) {
             connectionStatus.textContent = 'Conectado';
@@ -862,7 +945,7 @@ function showPWAPromoBanner() {
     if (window.matchMedia('(display-mode: standalone)').matches) {
         return; 
     }
-    
+
     const banner = document.getElementById('pwaPromoBanner');
     if (banner) {
         banner.classList.add('show');
@@ -897,9 +980,9 @@ function showInstallSuccessMessage() {
             </p>
         </div>
     `;
-    
+
     document.body.appendChild(message);
-    
+
     setTimeout(() => {
         if (message.parentNode) {
             message.parentNode.removeChild(message);
@@ -928,9 +1011,9 @@ function showInstallRejectedMessage() {
             </p>
         </div>
     `;
-    
+
     document.body.appendChild(message);
-    
+
     setTimeout(() => {
         if (message.parentNode) {
             message.parentNode.removeChild(message);
@@ -946,19 +1029,19 @@ async function loadActivities() {
         showOfflineMessage();
         return;
     }
-    
+
     try {
         loadingElement.style.display = 'block';
         cardsContainer.innerHTML = '';
-        
+
         const activities = await fetchSheetData();
         loadingElement.style.display = 'none';
 
         localStorage.setItem('cachedActivities', JSON.stringify(activities));
         localStorage.setItem('lastUpdate', new Date().toISOString());
-        
+
         processAndDisplayActivities(activities);
-        
+
     } catch (error) {
         loadingElement.style.display = 'none';
 
@@ -974,7 +1057,7 @@ async function loadActivities() {
 
 function processAndDisplayActivities(activities) {
     const cardsContainer = document.getElementById('cardsContainer');
-    
+
     if (activities.length === 0) {
         cardsContainer.innerHTML = `
             <div class="empty-message">
@@ -984,16 +1067,16 @@ function processAndDisplayActivities(activities) {
         `;
         return;
     }
-    
+
     const { expiredCount, pendingCount } = processExpiredTasks(activities);
-    
+
     activities.forEach((activity, index) => {
         const card = createCard(activity, index);
         cardsContainer.appendChild(card);
     });
-    
+
     updateTasksCounter(pendingCount, expiredCount, false);
-    
+
     setTimeout(() => {
         setupHoverMessages();
         enhanceSubtitle();
@@ -1003,7 +1086,7 @@ function processAndDisplayActivities(activities) {
 function showOfflineMessage() {
     const cardsContainer = document.getElementById('cardsContainer');
     const cachedActivities = localStorage.getItem('cachedActivities');
-    
+
     if (cachedActivities) {
         console.log(' Modo offline - Cargando datos cacheados');
         processAndDisplayActivities(JSON.parse(cachedActivities));
@@ -1021,7 +1104,7 @@ function showOfflineMessage() {
 function showOfflineBanner() {
     const existingBanner = document.getElementById('offlineBanner');
     if (existingBanner) return;
-    
+
     const banner = document.createElement('div');
     banner.id = 'offlineBanner';
     banner.innerHTML = `
@@ -1029,9 +1112,9 @@ function showOfflineBanner() {
             <strong>Modo Offline</strong> - Visualizando datos cacheados
         </div>
     `;
-    
+
     document.body.appendChild(banner);
-    
+
     setTimeout(() => {
         if (banner.parentNode) {
             banner.parentNode.removeChild(banner);
@@ -1050,7 +1133,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
     installButton.classList.remove('hidden');
 
     setTimeout(showPWAPromoBanner, 5000);
-    
+
     console.log('PWA está lista para instalación');
 });
 
@@ -1061,13 +1144,13 @@ installButton.addEventListener('click', async () => {
     }
 
     deferredPrompt.prompt();
-    
+
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     console.log(`Usuario ${outcome} la instalación`);
 
     hidePWAPromoBanner();
-    
+
     if (outcome === 'accepted') {
         showInstallSuccessMessage();
     } else {
@@ -1083,7 +1166,7 @@ window.addEventListener('appinstalled', () => {
     installButton.classList.add('hidden');
     hidePWAPromoBanner();
     deferredPrompt = null;
-    
+
     console.log('PWA instalada correctamente');
     showInstallSuccessMessage();
 });
@@ -1097,7 +1180,7 @@ function showPWAPromoBanner() {
     if (window.matchMedia('(display-mode: standalone)').matches) {
         return; 
     }
-    
+
     if (deferredPrompt && !sessionStorage.getItem('pwaBannerDismissed')) {
         pwaPromoBanner.classList.add('show');
     }
@@ -1135,9 +1218,9 @@ function showInstallSuccessMessage() {
             Ahora puedes acceder rápidamente desde tu pantalla de inicio
         </p>
     `;
-    
+
     document.body.appendChild(message);
-    
+
     setTimeout(() => {
         if (message.parentNode) {
             message.parentNode.removeChild(message);
@@ -1165,9 +1248,9 @@ function showInstallRejectedMessage() {
             Puedes instalar la app luego desde el menú de tu navegador
         </p>
     `;
-    
+
     document.body.appendChild(message);
-    
+
     setTimeout(() => {
         if (message.parentNode) {
             message.parentNode.removeChild(message);
@@ -1177,7 +1260,7 @@ function showInstallRejectedMessage() {
 
 function setupConnectionMonitor() {
     const connectionStatus = document.getElementById('connectionStatus');
-    
+
     function updateConnectionStatus() {
         if (navigator.onLine) {
             connectionStatus.textContent = '✅ Conectado';
@@ -1212,12 +1295,20 @@ if ('serviceWorker' in navigator) {
 
 }
 
+const PUBLIC_VAPID_KEY = "BAAj8AYP6CPtIBm6M0-jFHSC9Yix3TmwRfT9QY_TlzUPHV_2vV3gl0TzI1XH90r0XCkSs8FY6hrnmN90aSinIoM";
 import { messaging } from './firebase-config.js';
 import { getToken, onMessage } from "firebase/messaging";
 
+async function registerPush() {
+  if ("serviceWorker" in navigator) {
+    const registration = await navigator.serviceWorker.register("service-worker.js");
 function showLocalNotification(title, options = {}) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
+    });
     const notificationOptions = {
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',
@@ -1230,6 +1321,10 @@ function showLocalNotification(title, options = {}) {
 async function initFirebasePush() {
     if (!('Notification' in window)) return;
 
+    await fetch("/subscribe", {
+      method: "POST",
+      body: JSON.stringify(subscription),
+      headers: { "Content-Type": "application/json" },
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
         console.log('Permiso de notificaciones denegado');
@@ -1241,12 +1336,20 @@ async function initFirebasePush() {
     });
     console.log('Token FCM:', token);
 
+    console.log("Suscripción registrada");
+  }
+}
     await fetch('https://TU_BACKEND_URL/register-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token })
     });
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
     onMessage(messaging, payload => {
         console.log('Notificación recibida:', payload);
         showLocalNotification(payload.notification.title, {
@@ -1255,5 +1358,4 @@ async function initFirebasePush() {
     });
 }
 
-initFirebasePush();
-
+registerPush();
