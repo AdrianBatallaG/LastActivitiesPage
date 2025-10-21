@@ -840,89 +840,6 @@ function enhanceSubtitle() {
     }
 }
 
-async function setupPushNotifications(registration) {
-    if (!('Notification' in window)) {
-        console.log('Este navegador no soporta notificaciones');
-        return;
-    }
-
-    if (Notification.permission === 'default') {
-        try {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                console.log('Permiso para notificaciones concedido');
-                subscribeToPush(registration);
-            }
-        } catch (error) {
-            console.error('Error solicitando permiso:', error);
-        }
-    } else if (Notification.permission === 'granted') {
-        subscribeToPush(registration);
-    }
-}
-
-async function subscribeToPush(registration) {
-    try {
-        const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array('BLx1eQ3...')
-        });
-        
-        console.log('Suscrito a notificaciones push:', subscription);
-        await sendSubscriptionToServer(subscription);
-        
-    } catch (error) {
-        console.error('Error suscribiéndose a push:', error);
-    }
-}
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/\-/g, '+')
-        .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-async function sendSubscriptionToServer(subscription) {
-    try {
-        const response = await fetch('/api/subscribe', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(subscription)
-        });
-        
-        if (response.ok) {
-            console.log('Suscripción guardada en servidor');
-        }
-    } catch (error) {
-        console.error('Error enviando suscripción:', error);
-    }
-}
-
-function showLocalNotification(title, options = {}) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') {
-        return;
-    }
-
-    const notificationOptions = {
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
-        ...options
-    };
-
-    new Notification(title, notificationOptions);
-}
-
 function setupConnectionMonitor() {
     const connectionStatus = document.getElementById('connectionStatus');
     
@@ -1295,33 +1212,48 @@ if ('serviceWorker' in navigator) {
 
 }
 
-const PUBLIC_VAPID_KEY = "BAAj8AYP6CPtIBm6M0-jFHSC9Yix3TmwRfT9QY_TlzUPHV_2vV3gl0TzI1XH90r0XCkSs8FY6hrnmN90aSinIoM";
+import { messaging } from './firebase-config.js';
+import { getToken, onMessage } from "firebase/messaging";
 
-async function registerPush() {
-  if ("serviceWorker" in navigator) {
-    const registration = await navigator.serviceWorker.register("service-worker.js");
+function showLocalNotification(title, options = {}) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
-    });
+    const notificationOptions = {
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        ...options
+    };
 
-    await fetch("/subscribe", {
-      method: "POST",
-      body: JSON.stringify(subscription),
-      headers: { "Content-Type": "application/json" },
-    });
-
-    console.log("Suscripción registrada");
-  }
+    new Notification(title, notificationOptions);
 }
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+async function initFirebasePush() {
+    if (!('Notification' in window)) return;
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        console.log('Permiso de notificaciones denegado');
+        return;
+    }
+
+    const token = await getToken(messaging, {
+        vapidKey: 'AAj8AYP6CPtIBm6M0-jFHSC9Yix3TmwRfT9QY_TlzUPHV_2vV3gl0TzI1XH90r0XCkSs8FY6hrnmN90aSinIoM'  // la que generaste en Firebase
+    });
+    console.log('Token FCM:', token);
+
+    await fetch('https://TU_BACKEND_URL/register-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+    });
+
+    onMessage(messaging, payload => {
+        console.log('Notificación recibida:', payload);
+        showLocalNotification(payload.notification.title, {
+            body: payload.notification.body
+        });
+    });
 }
 
-registerPush();
+initFirebasePush();
 
